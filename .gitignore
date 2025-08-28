@@ -4,9 +4,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Конфігураційні файли з ключами
-config.json
-
 # Змінні середовища
 .env
 .env.local

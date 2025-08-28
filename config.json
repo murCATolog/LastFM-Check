@@ -1,0 +1,121 @@
+{
+  "telegram": {
+    "botToken": "8126637588:AAGGTPxRBqV17nN45yWITXg89tfKb6YtjCU",
+    "chatId": "374671547"
+  },
+  "lastfm": {
+    "apiKey": "402f2b1cb42de18108f1773c4b0d6d66",
+    "apiSecret": "8d5a58bd167e40dbbf84245e93845850"
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 88,
+    "description": "Налаштування сервера"
+  },
+  "schedule": {
+    "cron": "*/30 * * * *",
+    "description": "Запуск кожні ___ хвилин"
+  },
+  "users": [
+    {
+      "username": "Міні ПК (Apple Music)",
+      "lastfmProfile": "https://www.last.fm/user/Tina_LozaLupa"
+    },
+    {
+      "username": "Телефон (Apple Music)",
+      "lastfmProfile": "https://www.last.fm/user/yarik_ryzhenko"
+    },
+    {
+      "username": "ПК - Yaryna (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/yarik35old"
+    },
+    {
+      "username": "Pizy Piky & Niger (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/yaros_yaros"
+    },
+    {
+      "username": "Vzuvaemo (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Vzuvaemo"
+    },
+    {
+      "username": "Insta (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/murRecrods"
+    },
+    {
+      "username": "Tuto (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Tuto_Prostituto"
+    },
+    {
+      "username": "Tidal",
+      "lastfmProfile": "https://www.last.fm/user/Tidal_Zalupa"
+    },
+    {
+      "username": "YouTube",
+      "lastfmProfile": "https://www.last.fm/user/YouTube_Zalupa"
+    },
+    {
+      "username": "Corp 89 Apple",
+      "lastfmProfile": "https://www.last.fm/user/Corp_89"
+    },
+    {
+      "username": "Apple Dolli",
+      "lastfmProfile": "https://www.last.fm/user/gartun_shura"
+    },
+    {
+      "username": "Pidar Spotify",
+      "lastfmProfile": "https://www.last.fm/ru/user/blyad_i_pidar"
+    },
+    {
+      "username": "Drums Spotify",
+      "lastfmProfile": "https://www.last.fm/user/Tolik-Alcoholic"
+    },
+    {
+      "username": "Dertanyan",
+      "lastfmProfile": "https://www.last.fm/user/Skrestim_Spagi"
+    },
+    {
+      "username": "Ykin TV",
+      "lastfmProfile": "https://www.last.fm/user/Ykin_TV"
+    },
+    {
+      "username": "Obana Ok",
+      "lastfmProfile": "https://www.last.fm/user/obana-ok"
+    },
+    {
+      "username": "Kokos Amerikos",
+      "lastfmProfile": "https://www.last.fm/user/Kokos_Amerikos"
+    },
+    {
+      "username": "Lozalupa69",
+      "lastfmProfile": "https://www.last.fm/user/lozalupa69"
+    },
+    {
+      "username": "Pumba Oleg",
+      "lastfmProfile": "https://www.last.fm/user/Pumba_Oleg"
+    },
+    {
+      "username": "Labean Dreams",
+      "lastfmProfile": "https://www.last.fm/user/Labean_Dreams"
+    },
+    {
+      "username": "Diana Yarova",
+      "lastfmProfile": "https://www.last.fm/user/Diana_Yarova"
+    },
+    {
+      "username": "MurHUB Music",
+      "lastfmProfile": "https://www.last.fm/user/murHUBmusic"
+    },
+    {
+      "username": "Tolik Gartun",
+      "lastfmProfile": "https://www.last.fm/user/tolik_gartun"
+    },
+    {
+      "username": "Nazarenko KH",
+      "lastfmProfile": "https://www.last.fm/user/nazarenko_kh"
+    }
+  ],
+  "inactivityThreshold": {
+    "minutes": 10,
+    "description": "Час неактивності в хвилинах перед відправкою повідомлення (1440 хв = 24 години)"
+  }
+}
