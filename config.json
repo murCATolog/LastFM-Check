@@ -18,15 +18,47 @@
   },
   "users": [
     {
-      "username": "Міні ПК (Apple Music)",
+      "username": "Tidal ПК",
+      "lastfmProfile": "https://www.last.fm/user/Tidal_Zalupa"
+    },
+    {
+      "username": "Kazah murhub (Tidal)",
+      "lastfmProfile": "https://www.last.fm/user/murHUBmusic"
+    },
+    {
+      "username": "Kazah labean (Tidal)",
+      "lastfmProfile": "https://www.last.fm/user/tolik_gartun"
+    },
+    {
+      "username": "Kazah yaroslav.ryzhenko (Tidal)",
+      "lastfmProfile": "https://www.last.fm/user/nazarenko_kh"
+    },
+    {
+      "username": "Міні ПК (Apple)",
       "lastfmProfile": "https://www.last.fm/user/Tina_LozaLupa"
     },
     {
-      "username": "Телефон (Apple Music)",
+      "username": "Телефон (Apple)",
       "lastfmProfile": "https://www.last.fm/user/yarik_ryzhenko"
     },
     {
-      "username": "ПК - Yaryna (Spotify)",
+      "username": "Нетбук Asus (Apple)",
+      "lastfmProfile": "https://www.last.fm/user/Corp_89"
+    },
+    {
+      "username": "ПК - Dolli (Apple)",
+      "lastfmProfile": "https://www.last.fm/user/gartun_shura"
+    },
+    {
+      "username": "Ноутбук Acer (Apple)",
+      "lastfmProfile": "https://www.last.fm/user/lozalupa69"
+    },
+    {
+      "username": "Vzuvaemo (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Vzuvaemo"
+    },
+    {
+      "username": "Yaryna (Spotify)",
       "lastfmProfile": "https://www.last.fm/user/yarik35old"
     },
     {
@@ -34,84 +66,52 @@
       "lastfmProfile": "https://www.last.fm/user/yaros_yaros"
     },
     {
-      "username": "Vzuvaemo (Spotify)",
-      "lastfmProfile": "https://www.last.fm/user/Vzuvaemo"
+      "username": "Leha Guzva (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Ykin_TV"
     },
     {
-      "username": "Insta (Spotify)",
+      "username": "4erevychok (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/obana-ok"
+    },
+    {
+      "username": "Kokos (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Kokos_Amerikos"
+    },
+    {
+      "username": "Pumba (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Pumba_Oleg"
+    },
+    {
+      "username": "murHUB (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Labean_Dreams"
+    },
+    {
+      "username": "murCATolog Records (Spotify)",
       "lastfmProfile": "https://www.last.fm/user/murRecrods"
+    },
+    {
+      "username": "Anatoliy (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Tolik-Alcoholic"
     },
     {
       "username": "Tuto (Spotify)",
       "lastfmProfile": "https://www.last.fm/user/Tuto_Prostituto"
     },
     {
-      "username": "Tidal",
-      "lastfmProfile": "https://www.last.fm/user/Tidal_Zalupa"
+      "username": "LozaLupaMusic (Spotify)",
+      "lastfmProfile": "https://www.last.fm/ru/user/blyad_i_pidar"
+    },
+    {
+      "username": "Dertanyan (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Skrestim_Spagi"
+    },
+    {
+      "username": "Diana (Spotify)",
+      "lastfmProfile": "https://www.last.fm/user/Diana_Yarova"
     },
     {
       "username": "YouTube",
       "lastfmProfile": "https://www.last.fm/user/YouTube_Zalupa"
-    },
-    {
-      "username": "Corp 89 Apple",
-      "lastfmProfile": "https://www.last.fm/user/Corp_89"
-    },
-    {
-      "username": "Apple Dolli",
-      "lastfmProfile": "https://www.last.fm/user/gartun_shura"
-    },
-    {
-      "username": "Pidar Spotify",
-      "lastfmProfile": "https://www.last.fm/ru/user/blyad_i_pidar"
-    },
-    {
-      "username": "Drums Spotify",
-      "lastfmProfile": "https://www.last.fm/user/Tolik-Alcoholic"
-    },
-    {
-      "username": "Dertanyan",
-      "lastfmProfile": "https://www.last.fm/user/Skrestim_Spagi"
-    },
-    {
-      "username": "Ykin TV",
-      "lastfmProfile": "https://www.last.fm/user/Ykin_TV"
-    },
-    {
-      "username": "Obana Ok",
-      "lastfmProfile": "https://www.last.fm/user/obana-ok"
-    },
-    {
-      "username": "Kokos Amerikos",
-      "lastfmProfile": "https://www.last.fm/user/Kokos_Amerikos"
-    },
-    {
-      "username": "Lozalupa69",
-      "lastfmProfile": "https://www.last.fm/user/lozalupa69"
-    },
-    {
-      "username": "Pumba Oleg",
-      "lastfmProfile": "https://www.last.fm/user/Pumba_Oleg"
-    },
-    {
-      "username": "Labean Dreams",
-      "lastfmProfile": "https://www.last.fm/user/Labean_Dreams"
-    },
-    {
-      "username": "Diana Yarova",
-      "lastfmProfile": "https://www.last.fm/user/Diana_Yarova"
-    },
-    {
-      "username": "MurHUB Music",
-      "lastfmProfile": "https://www.last.fm/user/murHUBmusic"
-    },
-    {
-      "username": "Tolik Gartun",
-      "lastfmProfile": "https://www.last.fm/user/tolik_gartun"
-    },
-    {
-      "username": "Nazarenko KH",
-      "lastfmProfile": "https://www.last.fm/user/nazarenko_kh"
     }
   ],
   "inactivityThreshold": {
