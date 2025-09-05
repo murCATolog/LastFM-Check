@@ -114,12 +114,41 @@ async function runManualCheck(chatId) {
   await bot.sendMessage(chatId, '✅ Перевірка завершена!');
 }
 
+// Функція для формування таблиці неактивних користувачів
+function formatInactiveUsersTable() {
+  if (inactiveUsersData.size === 0) {
+    return null;
+  }
+  
+  // Сортуємо користувачів за часом неактивності (від більшого до меншого)
+  const sortedInactiveUsers = Array.from(inactiveUsersData.values())
+    .sort((a, b) => b.minutesInactive - a.minutesInactive);
+  
+  let tableMessage = `⚠️ Неактивні Last.fm профілі:\n\n`;
+  
+  for (const user of sortedInactiveUsers) {
+    // Форматуємо посилання як клікабельне ім'я
+    const lastfmDisplayName = user.lastfmUsername;
+    const clickableLink = `[${lastfmDisplayName}](${user.lastfmProfile})`;
+    
+    // Додаємо іконку для API помилок
+    const statusIcon = user.isApiError ? '🔴' : '🍌';
+    
+    tableMessage += `${statusIcon} **${user.username}** | ${clickableLink}\n⏱️ ${user.timeInactive}\n\n`;
+  }
+  
+  return tableMessage;
+}
+
 
 
 
 
 // Зберігання стану користувачів (активний/неактивний)
 const userStates = new Map();
+
+// Зберігання детальної інформації про неактивних користувачів
+const inactiveUsersData = new Map();
 
 // Функція для отримання останнього треку з Last.fm API
 async function getLastTrack(username) {
@@ -222,20 +251,16 @@ async function checkUserActivity(user) {
       const wasPreviouslyActive = userStates.get(username) === 'active';
       userStates.set(username, 'inactive');
       
-      // Повідомляємо про проблему з профілем тільки якщо користувач був активним
+      // Зберігаємо дані про користувача з проблемами API
       if (wasPreviouslyActive) {
-        const message = `⚠️ Проблема з Last.fm профілем!\n\n` +
-                       `👤 Користувач: ${username}\n` +
-                       `🔗 Профіль: ${user.lastfmProfile}\n` +
-                       `❌ Не вдалося отримати дані про активність`;
-        
-        try {
-          if (config.telegram.chatId !== 'YOUR_CHAT_ID') {
-            await bot.sendMessage(config.telegram.chatId, message);
-          }
-        } catch (error) {
-          console.error(`❌ Помилка відправки повідомлення для ${username}:`, error.message);
-        }
+        inactiveUsersData.set(username, {
+          username: username,
+          lastfmProfile: user.lastfmProfile,
+          lastfmUsername: lastfmUsername,
+          timeInactive: 'API помилка',
+          minutesInactive: 999999,
+          isApiError: true
+        });
       }
       
       // Встановлюємо прапорець ініціалізації
@@ -262,7 +287,7 @@ async function checkUserActivity(user) {
     // Оновлюємо стан користувача
     userStates.set(username, isCurrentlyInactive ? 'inactive' : 'active');
     
-    // Якщо профіль неактивний більше порогу - відправляємо повідомлення
+    // Якщо профіль неактивний більше порогу - зберігаємо дані для подальшого повідомлення
     if (isCurrentlyInactive) {
       const minutesInactive = Math.floor(timeSinceLastTrack / 60);
       const hoursInactive = Math.floor(minutesInactive / 60);
@@ -277,18 +302,17 @@ async function checkUserActivity(user) {
         timeMessage = `${minutesInactive} хвилин`;
       }
       
-      const message = `⚠️ Неактивний Last.fm профіль!\n\n` +
-                     `👤 Користувач: ${username}\n` +
-                     `⏰ Неактивний: ${timeMessage}\n` +
-                     `🔗 Профіль: ${user.lastfmProfile}`;
-      
-      try {
-        if (config.telegram.chatId !== 'YOUR_CHAT_ID') {
-          await bot.sendMessage(config.telegram.chatId, message);
-        }
-      } catch (error) {
-        console.error(`❌ Помилка відправки повідомлення для ${username}:`, error.message);
-      }
+      // Зберігаємо дані про неактивного користувача
+      inactiveUsersData.set(username, {
+        username: username,
+        lastfmProfile: user.lastfmProfile,
+        lastfmUsername: lastfmUsername,
+        timeInactive: timeMessage,
+        minutesInactive: minutesInactive
+      });
+    } else {
+      // Якщо користувач активний, видаляємо його з неактивних
+      inactiveUsersData.delete(username);
     }
     
     // Встановлюємо прапорець ініціалізації
@@ -308,6 +332,9 @@ async function checkAllUsers() {
   let activeUsers = 0;
   let inactiveUsers = 0;
   let errorUsers = 0;
+  
+  // Очищуємо дані про неактивних користувачів перед новою перевіркою
+  inactiveUsersData.clear();
   
   for (let i = 0; i < config.users.length; i++) {
     const user = config.users[i];
@@ -332,6 +359,21 @@ async function checkAllUsers() {
     // Невелика затримка між запитами до API (крім останнього користувача)
     if (i < config.users.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  // Відправляємо єдине повідомлення з таблицею неактивних користувачів
+  if (inactiveUsersData.size > 0 && config.telegram.chatId !== 'YOUR_CHAT_ID') {
+    const tableMessage = formatInactiveUsersTable();
+    if (tableMessage) {
+      try {
+        await bot.sendMessage(config.telegram.chatId, tableMessage, { 
+          parse_mode: 'Markdown',
+          disable_web_page_preview: true 
+        });
+      } catch (error) {
+        console.error('❌ Помилка відправки таблиці неактивних користувачів:', error.message);
+      }
     }
   }
 }
