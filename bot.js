@@ -27,12 +27,67 @@ bot.on('message', async (msg) => {
   
   // Обробляємо команди
   if (text === '📊 Статус користувачів') {
-    showStatus(chatId);
+    await showStatus(chatId);
   } else if (text === '🔄 Ручна перевірка') {
+    await runManualCheck(chatId);
+  } else if (text === '⚙️ Управління акаунтами') {
+    await showAccountManagement(chatId);
+  } else if (text.startsWith('/start ')) {
+    const command = text.replace('/start ', '');
+    if (command.startsWith('disable_')) {
+      const username = command.replace('disable_', '');
+      await toggleAccountStatus(chatId, username, false);
+    } else if (command.startsWith('enable_')) {
+      const username = command.replace('enable_', '');
+      await toggleAccountStatus(chatId, username, true);
+    } else if (command === 'manual_check') {
+      await runManualCheck(chatId);
+    } else {
+      showMainMenu(chatId);
+    }
+  } else if (text.includes('disable_')) {
+    const match = text.match(/disable_(.+)/);
+    if (match) {
+      const username = match[1];
+      await toggleAccountStatus(chatId, username, false);
+    }
+  } else if (text.includes('enable_')) {
+    const match = text.match(/enable_(.+)/);
+    if (match) {
+      const username = match[1];
+      await toggleAccountStatus(chatId, username, true);
+    }
+  } else if (text === 'manual_check') {
     await runManualCheck(chatId);
   } else {
     // Для будь-якого іншого повідомлення показуємо головне меню
     showMainMenu(chatId);
+  }
+});
+
+// Обробка callback queries (inline кнопки)
+bot.on('callback_query', async (callbackQuery) => {
+  const chatId = callbackQuery.message.chat.id;
+  const data = callbackQuery.data;
+  
+  try {
+    if (data.startsWith('disable_')) {
+      const username = data.replace('disable_', '');
+      await toggleAccountStatus(chatId, username, false);
+    } else if (data.startsWith('enable_')) {
+      const username = data.replace('enable_', '');
+      await toggleAccountStatus(chatId, username, true);
+    } else if (data === 'back_to_menu') {
+      showMainMenu(chatId);
+    } else if (data === 'manual_check') {
+      await runManualCheck(chatId);
+    }
+    
+    // Відповідаємо на callback query
+    await bot.answerCallbackQuery(callbackQuery.id);
+  } catch (error) {
+    console.error('❌ Помилка обробки callback query:', error.message);
+    await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ Помилка обробки запиту' });
   }
 });
 
@@ -77,7 +132,8 @@ ${config.users.map(user => `• ${user.username}`).join('\n')}
 
   const keyboard = {
     keyboard: [
-      ['📊 Статус користувачів', '🔄 Ручна перевірка']
+      ['📊 Статус користувачів', '🔄 Ручна перевірка'],
+      ['⚙️ Управління акаунтами']
     ],
     resize_keyboard: true,
     one_time_keyboard: false
@@ -87,31 +143,104 @@ ${config.users.map(user => `• ${user.username}`).join('\n')}
 }
 
 // Функція для показу статусу
-function showStatus(chatId) {
+async function showStatus(chatId) {
   let statusMessage = `📊 Статус користувачів:\n\n`;
   
   for (const user of config.users) {
-    const userState = userStates.get(user.username);
-    const status = userState === 'active' ? '✅ Активний' : '❌ Неактивний';
-    statusMessage += `${user.username}: ${status}\n`;
+    if (user.disabled) {
+      statusMessage += `${user.username} ⏸️\n`;
+    } else {
+      const userState = userStates.get(user.username);
+      if (userState === 'active') {
+        statusMessage += `${user.username} ✅\n`;
+      } else if (userState === 'inactive') {
+        const inactiveData = inactiveUsersData.get(user.username);
+        if (inactiveData) {
+          statusMessage += `${user.username} ❌ (${inactiveData.timeInactive})\n`;
+        } else {
+          statusMessage += `${user.username} ❌\n`;
+        }
+      } else {
+        statusMessage += `${user.username} ✅\n`;
+      }
+    }
   }
   
+  bot.sendMessage(chatId, statusMessage);
+}
+
+// Функція для управління акаунтами
+async function showAccountManagement(chatId) {
+  // Створюємо inline кнопки для кожного користувача
   const keyboard = {
-    keyboard: [
-      ['📊 Статус користувачів', '🔄 Ручна перевірка']
-    ],
-    resize_keyboard: true,
-    one_time_keyboard: false
+    inline_keyboard: []
   };
   
-  bot.sendMessage(chatId, statusMessage, { reply_markup: keyboard });
+  for (const user of config.users) {
+    const userState = userStates.get(user.username);
+    let statusText = '';
+    
+    if (user.disabled) {
+      statusText = '⏸️';
+    } else if (userState === 'inactive') {
+      const inactiveData = inactiveUsersData.get(user.username);
+      if (inactiveData) {
+        statusText = `❌ (${inactiveData.timeInactive})`;
+      } else {
+        statusText = '❌';
+      }
+    } else {
+      statusText = '✅';
+    }
+    
+    if (user.disabled) {
+      keyboard.inline_keyboard.push([{
+        text: `Увім: ${user.username} ${statusText}`,
+        callback_data: `enable_${user.username}`
+      }]);
+    } else {
+      keyboard.inline_keyboard.push([{
+        text: `Вим: ${user.username} ${statusText}`,
+        callback_data: `disable_${user.username}`
+      }]);
+    }
+  }
+  
+  const message = `⚙️ Управління акаунтами\n\nНатисніть на кнопку для зміни статусу:`;
+  bot.sendMessage(chatId, message, { reply_markup: keyboard });
 }
 
 // Функція для ручної перевірки
 async function runManualCheck(chatId) {
   await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
   await checkAllUsers();
-  await bot.sendMessage(chatId, '✅ Перевірка завершена!');
+}
+
+
+// Функція для перемикання статусу акаунта
+async function toggleAccountStatus(chatId, username, enabled) {
+  const user = config.users.find(u => u.username === username);
+  
+  if (!user) {
+    await bot.sendMessage(chatId, `❌ Користувач "${username}" не знайдений!`);
+    return;
+  }
+  
+  user.disabled = !enabled;
+  
+  // Зберігаємо оновлену конфігурацію
+  try {
+    fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(config, null, 2));
+    
+    const status = enabled ? 'увімкнено' : 'вимкнено';
+    await bot.sendMessage(chatId, `✅ Акаунт "${username}" ${status}!`);
+    
+    // Показуємо оновлене меню управління
+    await showAccountManagement(chatId);
+  } catch (error) {
+    console.error(`❌ Помилка збереження конфігурації:`, error.message);
+    await bot.sendMessage(chatId, `❌ Помилка збереження конфігурації!`);
+  }
 }
 
 // Функція для формування таблиці неактивних користувачів
@@ -128,19 +257,16 @@ function formatInactiveUsersTable() {
   
   for (const user of sortedInactiveUsers) {
     // Форматуємо посилання як клікабельне ім'я
-    const lastfmDisplayName = user.lastfmUsername;
-    const clickableLink = `[${lastfmDisplayName}](${user.lastfmProfile})`;
+    const clickableLink = `<a href="${user.lastfmProfile}">${user.lastfmUsername}</a>`;
     
     // Додаємо іконку для API помилок
     const statusIcon = user.isApiError ? '🔴' : '🍌';
     
-    tableMessage += `${statusIcon} **${user.username}** | ${clickableLink}\n⏱️ ${user.timeInactive}\n\n`;
+    tableMessage += `${statusIcon} <b>${user.username}</b> | ${clickableLink}\n⏱️ ${user.timeInactive}\n`;
   }
   
   return tableMessage;
 }
-
-
 
 
 
@@ -295,11 +421,11 @@ async function checkUserActivity(user) {
       
       let timeMessage = '';
       if (daysInactive > 0) {
-        timeMessage = `${daysInactive} днів ${hoursInactive % 24} годин`;
+        timeMessage = `${daysInactive} д ${hoursInactive % 24} год`;
       } else if (hoursInactive > 0) {
-        timeMessage = `${hoursInactive} годин ${minutesInactive % 60} хвилин`;
+        timeMessage = `${hoursInactive} год ${minutesInactive % 60} хв`;
       } else {
-        timeMessage = `${minutesInactive} хвилин`;
+        timeMessage = `${minutesInactive} хв`;
       }
       
       // Зберігаємо дані про неактивного користувача
@@ -332,12 +458,18 @@ async function checkAllUsers() {
   let activeUsers = 0;
   let inactiveUsers = 0;
   let errorUsers = 0;
+  let disabledUsers = 0;
   
-  // Очищуємо дані про неактивних користувачів перед новою перевіркою
-  inactiveUsersData.clear();
+  // Не очищуємо дані про неактивних користувачів, щоб зберегти час неактивності
   
   for (let i = 0; i < config.users.length; i++) {
     const user = config.users[i];
+    
+    // Пропускаємо вимкнені акаунти
+    if (user.disabled) {
+      disabledUsers++;
+      continue;
+    }
     
     try {
       await checkUserActivity(user);
@@ -368,7 +500,7 @@ async function checkAllUsers() {
     if (tableMessage) {
       try {
         await bot.sendMessage(config.telegram.chatId, tableMessage, { 
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           disable_web_page_preview: true 
         });
       } catch (error) {
@@ -379,18 +511,17 @@ async function checkAllUsers() {
 }
 
 // Налаштування cron-завдання
-cron.schedule(config.schedule.cron, () => {
-  checkAllUsers().catch(error => {
+cron.schedule(config.schedule.cron, async () => {
+  try {
+    await checkAllUsers();
+  } catch (error) {
     console.error('❌ Помилка автоматичної перевірки:', error.message);
-  });
+  }
 });
 
-// Запуск першої перевірки при старті бота
-checkAllUsers().catch(error => {
-  console.error('❌ Помилка першої перевірки:', error.message);
-});
+// Перша перевірка відбудеться автоматично по cron розкладу
 
-console.log('🤖 Бот запущений і працює!');
+// Бот запущений
 
 // Обробка помилок
 process.on('unhandledRejection', (reason, promise) => {
