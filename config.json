@@ -7,11 +7,6 @@
     "apiKey": "402f2b1cb42de18108f1773c4b0d6d66",
     "apiSecret": "8d5a58bd167e40dbbf84245e93845850"
   },
-  "server": {
-    "host": "127.0.0.1",
-    "port": 88,
-    "description": "Налаштування сервера"
-  },
   "schedule": {
     "cron": "*/30 * * * *",
     "description": "Запуск кожні ... хвилин"
