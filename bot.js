@@ -144,6 +144,13 @@ ${config.users.map(user => `• ${user.username}`).join('\n')}
 
 // Функція для показу статусу
 async function showStatus(chatId) {
+  // Оновлюємо статуси перед показом
+  for (const user of config.users) {
+    if (!user.disabled) {
+      await checkUserActivity(user);
+    }
+  }
+  
   let statusMessage = `📊 Статус користувачів:\n\n`;
   
   for (const user of config.users) {
@@ -323,7 +330,7 @@ function processTrackData(track, username) {
     
     if (isNowPlaying) {
       return {
-        timestamp: Math.floor(Date.now() / 1000),
+        timestamp: 0, // Спеціальне значення для now playing
         track: track.name || 'Невідомий трек',
         artist: track.artist && track.artist['#text'] ? track.artist['#text'] : 'Невідомий виконавець',
         isNowPlaying: true
@@ -400,11 +407,13 @@ async function checkUserActivity(user) {
     if (lastTrackData.isNowPlaying) {
       userStates.set(username, 'active');
       userStates.set(username + '_initialized', true);
+      // Видаляємо з неактивних, якщо був там
+      inactiveUsersData.delete(username);
       return;
     }
     
     const currentTime = Math.floor(Date.now() / 1000);
-    const timeSinceLastTrack = currentTime - lastTrackData.timestamp;
+    const timeSinceLastTrack = lastTrackData.timestamp === 0 ? 0 : currentTime - lastTrackData.timestamp;
     const thresholdMinutes = config.inactivityThreshold.minutes;
     const thresholdSeconds = thresholdMinutes * 60;
     
@@ -460,7 +469,8 @@ async function checkAllUsers() {
   let errorUsers = 0;
   let disabledUsers = 0;
   
-  // Не очищуємо дані про неактивних користувачів, щоб зберегти час неактивності
+  // Очищуємо дані про неактивних користувачів для актуальної перевірки
+  inactiveUsersData.clear();
   
   for (let i = 0; i < config.users.length; i++) {
     const user = config.users[i];
