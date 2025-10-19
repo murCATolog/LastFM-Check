@@ -131,7 +131,7 @@ function showMainMenu(chatId) {
 📊 Моніторимо ${config.users.length} користувачів:
 ${config.users.map(user => `• ${user.username}`).join('\n')}
 
-⏰ Автоматична перевірка: кожні 5 хвилин
+⏰ Автоматична перевірка: кожні 30 хвилин
 ⏱️ Поріг неактивності: ${config.inactivityThreshold.minutes} хвилин`;
 
   const keyboard = {
@@ -148,6 +148,9 @@ ${config.users.map(user => `• ${user.username}`).join('\n')}
 
 // Функція для показу статусу
 async function showStatus(chatId) {
+  // Очищуємо дані про неактивних користувачів для актуальної перевірки
+  inactiveUsersData.clear();
+  
   // Оновлюємо статуси перед показом
   for (const user of config.users) {
     if (!user.disabled) {
@@ -455,6 +458,7 @@ async function checkUserActivity(user) {
     
     // Якщо профіль неактивний більше порогу - зберігаємо дані для подальшого повідомлення
     if (isCurrentlyInactive) {
+      // ЗАВЖДИ обчислюємо актуальний час неактивності
       const minutesInactive = Math.floor(timeSinceLastTrack / 60);
       const hoursInactive = Math.floor(minutesInactive / 60);
       const daysInactive = Math.floor(hoursInactive / 24);
@@ -501,8 +505,8 @@ async function checkAllUsers() {
   let errorUsers = 0;
   let disabledUsers = 0;
   
-  // НЕ очищуємо дані про неактивних користувачів - вони будуть оновлені в checkUserActivity
-  // inactiveUsersData.clear(); // Видалено цей рядок
+  // Очищуємо дані про неактивних користувачів для актуальної перевірки
+  inactiveUsersData.clear();
   
   for (let i = 0; i < config.users.length; i++) {
     const user = config.users[i];
