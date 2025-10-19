@@ -501,8 +501,8 @@ async function checkAllUsers() {
   let errorUsers = 0;
   let disabledUsers = 0;
   
-  // Очищуємо дані про неактивних користувачів для актуальної перевірки
-  inactiveUsersData.clear();
+  // НЕ очищуємо дані про неактивних користувачів - вони будуть оновлені в checkUserActivity
+  // inactiveUsersData.clear(); // Видалено цей рядок
   
   for (let i = 0; i < config.users.length; i++) {
     const user = config.users[i];
