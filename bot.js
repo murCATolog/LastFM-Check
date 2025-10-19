@@ -29,7 +29,8 @@ bot.on('message', async (msg) => {
   if (text === '📊 Статус користувачів') {
     await showStatus(chatId);
   } else if (text === '🔄 Ручна перевірка') {
-    await runManualCheck(chatId);
+    await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
+    await checkAllUsers();
   } else if (text === '⚙️ Управління акаунтами') {
     await showAccountManagement(chatId);
   } else if (text.startsWith('/start ')) {
@@ -41,7 +42,8 @@ bot.on('message', async (msg) => {
       const username = command.replace('enable_', '');
       await toggleAccountStatus(chatId, username, true);
     } else if (command === 'manual_check') {
-      await runManualCheck(chatId);
+      await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
+      await checkAllUsers();
     } else {
       showMainMenu(chatId);
     }
@@ -58,7 +60,8 @@ bot.on('message', async (msg) => {
       await toggleAccountStatus(chatId, username, true);
     }
   } else if (text === 'manual_check') {
-    await runManualCheck(chatId);
+    await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
+    await checkAllUsers();
   } else {
     // Для будь-якого іншого повідомлення показуємо головне меню
     showMainMenu(chatId);
@@ -80,7 +83,8 @@ bot.on('callback_query', async (callbackQuery) => {
     } else if (data === 'back_to_menu') {
       showMainMenu(chatId);
     } else if (data === 'manual_check') {
-      await runManualCheck(chatId);
+      await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
+      await checkAllUsers();
     }
     
     // Відповідаємо на callback query
@@ -217,11 +221,6 @@ async function showAccountManagement(chatId) {
   bot.sendMessage(chatId, message, { reply_markup: keyboard });
 }
 
-// Функція для ручної перевірки
-async function runManualCheck(chatId) {
-  await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
-  await checkAllUsers();
-}
 
 
 // Функція для перемикання статусу акаунта
@@ -384,15 +383,42 @@ async function checkUserActivity(user) {
       const wasPreviouslyActive = userStates.get(username) === 'active';
       userStates.set(username, 'inactive');
       
-      // Зберігаємо дані про користувача з проблемами API
-      if (wasPreviouslyActive) {
+      // Оновлюємо або створюємо дані про користувача з проблемами API
+      const existingData = inactiveUsersData.get(username);
+      if (existingData && existingData.isApiError) {
+        // Якщо користувач вже був з API помилкою, оновлюємо час
+        const timeSinceError = Math.floor((Date.now() - (existingData.errorTimestamp || Date.now())) / 1000 / 60);
+        const hoursInactive = Math.floor(timeSinceError / 60);
+        const daysInactive = Math.floor(hoursInactive / 24);
+        
+        let timeMessage = '';
+        if (daysInactive > 0) {
+          timeMessage = `${daysInactive} д ${hoursInactive % 24} год (API помилка)`;
+        } else if (hoursInactive > 0) {
+          timeMessage = `${hoursInactive} год ${timeSinceError % 60} хв (API помилка)`;
+        } else {
+          timeMessage = `${timeSinceError} хв (API помилка)`;
+        }
+        
+        inactiveUsersData.set(username, {
+          username: username,
+          lastfmProfile: user.lastfmProfile,
+          lastfmUsername: lastfmUsername,
+          timeInactive: timeMessage,
+          minutesInactive: timeSinceError,
+          isApiError: true,
+          errorTimestamp: existingData.errorTimestamp || Date.now()
+        });
+      } else {
+        // Новий користувач з API помилкою
         inactiveUsersData.set(username, {
           username: username,
           lastfmProfile: user.lastfmProfile,
           lastfmUsername: lastfmUsername,
           timeInactive: 'API помилка',
           minutesInactive: 999999,
-          isApiError: true
+          isApiError: true,
+          errorTimestamp: Date.now()
         });
       }
       
@@ -412,12 +438,17 @@ async function checkUserActivity(user) {
       return;
     }
     
-    const currentTime = Math.floor(Date.now() / 1000);
-    const timeSinceLastTrack = lastTrackData.timestamp === 0 ? 0 : currentTime - lastTrackData.timestamp;
+    // Використовуємо UTC час для порівняння з Last.fm timestamp
+    const currentTimeUTC = Math.floor(Date.now() / 1000);
+    const timeSinceLastTrack = lastTrackData.timestamp === 0 ? 0 : currentTimeUTC - lastTrackData.timestamp;
     const thresholdMinutes = config.inactivityThreshold.minutes;
     const thresholdSeconds = thresholdMinutes * 60;
     
-    const isCurrentlyInactive = timeSinceLastTrack > thresholdSeconds;
+    // Якщо timeSinceLastTrack негативний, це означає що трек в майбутньому
+    // В такому випадку вважаємо користувача активним (нещодавно слухав)
+    // Якщо timeSinceLastTrack позитивний і більше порогу - неактивний
+    const isCurrentlyInactive = timeSinceLastTrack > 0 && timeSinceLastTrack > thresholdSeconds;
+    
     
     // Оновлюємо стан користувача
     userStates.set(username, isCurrentlyInactive ? 'inactive' : 'active');
@@ -437,13 +468,14 @@ async function checkUserActivity(user) {
         timeMessage = `${minutesInactive} хв`;
       }
       
-      // Зберігаємо дані про неактивного користувача
+      // Оновлюємо або створюємо дані про неактивного користувача
       inactiveUsersData.set(username, {
         username: username,
         lastfmProfile: user.lastfmProfile,
         lastfmUsername: lastfmUsername,
         timeInactive: timeMessage,
-        minutesInactive: minutesInactive
+        minutesInactive: minutesInactive,
+        isApiError: false
       });
     } else {
       // Якщо користувач активний, видаляємо його з неактивних
@@ -504,7 +536,8 @@ async function checkAllUsers() {
     }
   }
   
-  // Відправляємо єдине повідомлення з таблицею неактивних користувачів
+  
+  // Відправляємо повідомлення з таблицею неактивних користувачів
   if (inactiveUsersData.size > 0 && config.telegram.chatId !== 'YOUR_CHAT_ID') {
     const tableMessage = formatInactiveUsersTable();
     if (tableMessage) {
@@ -516,6 +549,13 @@ async function checkAllUsers() {
       } catch (error) {
         console.error('❌ Помилка відправки таблиці неактивних користувачів:', error.message);
       }
+    }
+  } else if (config.telegram.chatId !== 'YOUR_CHAT_ID') {
+    // Відправляємо повідомлення про те, що всі профілі активні
+    try {
+      await bot.sendMessage(config.telegram.chatId, '✅ Всі профілі активні!');
+    } catch (error) {
+      console.error('❌ Помилка відправки повідомлення про активні профілі:', error.message);
     }
   }
 }
@@ -532,6 +572,7 @@ cron.schedule(config.schedule.cron, async () => {
 // Перша перевірка відбудеться автоматично по cron розкладу
 
 // Бот запущений
+console.log('🤖 Last.fm Monitor Bot запущений!');
 
 // Обробка помилок
 process.on('unhandledRejection', (reason, promise) => {
