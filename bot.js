@@ -22,7 +22,7 @@ bot.on('message', async (msg) => {
   try {
     fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(config, null, 2));
   } catch (error) {
-    console.error(`❌ Помилка збереження Chat ID:`, error.message);
+    // Ігноруємо помилку
   }
   
   // Обробляємо команди
@@ -30,7 +30,7 @@ bot.on('message', async (msg) => {
     await showStatus(chatId);
   } else if (text === '🔄 Ручна перевірка') {
     await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
-    await checkAllUsers();
+    await checkAllUsers(true);
   } else if (text === '⚙️ Управління акаунтами') {
     await showAccountManagement(chatId);
   } else if (text.startsWith('/start ')) {
@@ -43,9 +43,9 @@ bot.on('message', async (msg) => {
       await toggleAccountStatus(chatId, username, true);
     } else if (command === 'manual_check') {
       await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
-      await checkAllUsers();
+      await checkAllUsers(true);
     } else {
-      showMainMenu(chatId);
+      await showMainMenu(chatId);
     }
   } else if (text.includes('disable_')) {
     const match = text.match(/disable_(.+)/);
@@ -61,10 +61,10 @@ bot.on('message', async (msg) => {
     }
   } else if (text === 'manual_check') {
     await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
-    await checkAllUsers();
+    await checkAllUsers(true);
   } else {
     // Для будь-якого іншого повідомлення показуємо головне меню
-    showMainMenu(chatId);
+    await showMainMenu(chatId);
   }
 });
 
@@ -81,42 +81,42 @@ bot.on('callback_query', async (callbackQuery) => {
       const username = data.replace('enable_', '');
       await toggleAccountStatus(chatId, username, true);
     } else if (data === 'back_to_menu') {
-      showMainMenu(chatId);
+      await showMainMenu(chatId);
     } else if (data === 'manual_check') {
       await bot.sendMessage(chatId, '🔄 Запускаю перевірку...');
-      await checkAllUsers();
+      await checkAllUsers(true);
     }
     
     // Відповідаємо на callback query
     await bot.answerCallbackQuery(callbackQuery.id);
   } catch (error) {
-    console.error('❌ Помилка обробки callback query:', error.message);
+    logErrorOnce('callback_query', '❌ Помилка обробки callback query');
     await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ Помилка обробки запиту' });
   }
 });
 
 // Обробка помилок polling
 bot.on('polling_error', (error) => {
-  console.error('❌ Помилка polling Telegram бота:', error.message);
+  logErrorOnce('polling_error', '❌ Помилка polling Telegram бота');
   
   // Спробуємо перезапустити polling через 5 секунд
   setTimeout(() => {
     bot.stopPolling().then(() => {
       setTimeout(() => {
         bot.startPolling().catch(err => {
-          console.error('❌ Помилка перезапуску polling:', err.message);
+          logErrorOnce('polling_restart', '❌ Помилка перезапуску polling');
         });
       }, 1000);
     }).catch(err => {
-      console.error('❌ Помилка зупинки polling:', err.message);
+      logErrorOnce('polling_stop', '❌ Помилка зупинки polling');
     });
   }, 5000);
 });
 
 // При запуску бота автоматично показуємо меню
-bot.on('polling_start', () => {
+bot.on('polling_start', async () => {
   if (config.telegram.chatId && config.telegram.chatId !== 'YOUR_CHAT_ID') {
-    showMainMenu(config.telegram.chatId);
+    await showMainMenu(config.telegram.chatId);
   }
 });
 
@@ -125,7 +125,7 @@ bot.on('polling_stop', () => {
 });
 
 // Функція для показу головного меню
-function showMainMenu(chatId) {
+async function showMainMenu(chatId) {
   const welcomeMessage = `🎵 Last.fm Монітор
 
 📊 Моніторимо ${config.users.length} користувачів:
@@ -143,21 +143,11 @@ ${config.users.map(user => `• ${user.username}`).join('\n')}
     one_time_keyboard: false
   };
 
-  bot.sendMessage(chatId, welcomeMessage, { reply_markup: keyboard });
+  await bot.sendMessage(chatId, welcomeMessage, { reply_markup: keyboard });
 }
 
 // Функція для показу статусу
 async function showStatus(chatId) {
-  // Очищуємо дані про неактивних користувачів для актуальної перевірки
-  inactiveUsersData.clear();
-  
-  // Оновлюємо статуси перед показом
-  for (const user of config.users) {
-    if (!user.disabled) {
-      await checkUserActivity(user);
-    }
-  }
-  
   let statusMessage = `📊 Статус користувачів:\n\n`;
   
   for (const user of config.users) {
@@ -180,7 +170,7 @@ async function showStatus(chatId) {
     }
   }
   
-  bot.sendMessage(chatId, statusMessage);
+  await bot.sendMessage(chatId, statusMessage);
 }
 
 // Функція для управління акаунтами
@@ -221,7 +211,7 @@ async function showAccountManagement(chatId) {
   }
   
   const message = `⚙️ Управління акаунтами\n\nНатисніть на кнопку для зміни статусу:`;
-  bot.sendMessage(chatId, message, { reply_markup: keyboard });
+  await bot.sendMessage(chatId, message, { reply_markup: keyboard });
 }
 
 
@@ -247,7 +237,7 @@ async function toggleAccountStatus(chatId, username, enabled) {
     // Показуємо оновлене меню управління
     await showAccountManagement(chatId);
   } catch (error) {
-    console.error(`❌ Помилка збереження конфігурації:`, error.message);
+    logErrorOnce('config_save', '❌ Помилка збереження конфігурації');
     await bot.sendMessage(chatId, `❌ Помилка збереження конфігурації!`);
   }
 }
@@ -285,18 +275,34 @@ const userStates = new Map();
 // Зберігання детальної інформації про неактивних користувачів
 const inactiveUsersData = new Map();
 
+// Зберігання показаних помилок (щоб не дублювати)
+const shownErrors = new Set();
+
+// Функція для показу помилки тільки один раз
+function logErrorOnce(errorKey, errorMessage) {
+  if (!shownErrors.has(errorKey)) {
+    console.error(errorMessage);
+    shownErrors.add(errorKey);
+  }
+}
+
 // Функція для отримання останнього треку з Last.fm API
 async function getLastTrack(username) {
   try {
-    const response = await axios.get('http://ws.audioscrobbler.com/2.0/', {
+    const response = await axios.get('https://ws.audioscrobbler.com/2.0/', {
       params: {
         method: 'user.getrecenttracks',
         user: username,
         api_key: config.lastfm.apiKey,
         format: 'json',
-        limit: 1
+        limit: 1,
+        _: Date.now() // Запобігаємо кешуванню
       },
-      timeout: 10000 // 10 секунд таймаут
+      timeout: 10000, // 10 секунд таймаут
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
     });
 
     // Перевіряємо структуру відповіді
@@ -349,7 +355,12 @@ function processTrackData(track, username) {
       };
     }
     
-    const timestamp = parseInt(track.date.uts);
+    let timestamp = parseInt(track.date.uts);
+    
+    // Якщо timestamp виглядає як мілісекунди (занадто великий), конвертуємо в секунди
+    if (timestamp > 10000000000) {
+      timestamp = Math.floor(timestamp / 1000);
+    }
     
     // Перевіряємо чи timestamp валідний
     if (isNaN(timestamp) || timestamp < 1000000000) {
@@ -447,10 +458,17 @@ async function checkUserActivity(user) {
     const thresholdMinutes = config.inactivityThreshold.minutes;
     const thresholdSeconds = thresholdMinutes * 60;
     
-    // Якщо timeSinceLastTrack негативний, це означає що трек в майбутньому
-    // В такому випадку вважаємо користувача активним (нещодавно слухав)
-    // Якщо timeSinceLastTrack позитивний і більше порогу - неактивний
-    const isCurrentlyInactive = timeSinceLastTrack > 0 && timeSinceLastTrack > thresholdSeconds;
+    // Якщо timeSinceLastTrack негативний (трек в майбутньому через неправильний системний час),
+    // вважаємо користувача АКТИВНИМ, бо трек був нещодавно скроблений
+    if (timeSinceLastTrack < 0) {
+      userStates.set(username, 'active');
+      userStates.set(username + '_initialized', true);
+      inactiveUsersData.delete(username);
+      return;
+    }
+    
+    // Якщо timeSinceLastTrack більше порогу - неактивний
+    const isCurrentlyInactive = timeSinceLastTrack > thresholdSeconds;
     
     
     // Оновлюємо стан користувача
@@ -491,15 +509,13 @@ async function checkUserActivity(user) {
       userStates.set(username + '_initialized', true);
     }
   } catch (error) {
-    console.error(`❌ Помилка перевірки користувача ${username}:`, error.message);
-    
     // При помилці вважаємо користувача неактивним
     userStates.set(username, 'inactive');
   }
 }
 
 // Функція для перевірки всіх користувачів
-async function checkAllUsers() {
+async function checkAllUsers(isManualCheck = false) {
   let activeUsers = 0;
   let inactiveUsers = 0;
   let errorUsers = 0;
@@ -536,7 +552,7 @@ async function checkAllUsers() {
     
     // Невелика затримка між запитами до API (крім останнього користувача)
     if (i < config.users.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
   }
   
@@ -551,15 +567,15 @@ async function checkAllUsers() {
           disable_web_page_preview: true 
         });
       } catch (error) {
-        console.error('❌ Помилка відправки таблиці неактивних користувачів:', error.message);
+        logErrorOnce('send_inactive_table', '❌ Помилка відправки таблиці неактивних користувачів');
       }
     }
-  } else if (config.telegram.chatId !== 'YOUR_CHAT_ID') {
-    // Відправляємо повідомлення про те, що всі профілі активні
+  } else if (config.telegram.chatId !== 'YOUR_CHAT_ID' && isManualCheck) {
+    // Відправляємо повідомлення про те, що всі профілі активні (тільки при ручній перевірці)
     try {
       await bot.sendMessage(config.telegram.chatId, '✅ Всі профілі активні!');
     } catch (error) {
-      console.error('❌ Помилка відправки повідомлення про активні профілі:', error.message);
+      logErrorOnce('send_active_message', '❌ Помилка відправки повідомлення про активні профілі');
     }
   }
 }
@@ -569,7 +585,7 @@ cron.schedule(config.schedule.cron, async () => {
   try {
     await checkAllUsers();
   } catch (error) {
-    console.error('❌ Помилка автоматичної перевірки:', error.message);
+    logErrorOnce('auto_check', '❌ Помилка автоматичної перевірки');
   }
 });
 
@@ -580,11 +596,11 @@ console.log('🤖 Last.fm Monitor Bot запущений!');
 
 // Обробка помилок
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Необроблена помилка Promise:', reason);
+  logErrorOnce('unhandled_rejection', '❌ Необроблена помилка Promise');
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('❌ Необроблена помилка:', error.message);
+  logErrorOnce('uncaught_exception', '❌ Необроблена помилка');
 });
 
 // Обробка сигналів завершення
@@ -592,7 +608,6 @@ process.on('SIGINT', () => {
   bot.stopPolling().then(() => {
     process.exit(0);
   }).catch(error => {
-    console.error('❌ Помилка зупинки бота:', error.message);
     process.exit(1);
   });
 });
@@ -601,7 +616,6 @@ process.on('SIGTERM', () => {
   bot.stopPolling().then(() => {
     process.exit(0);
   }).catch(error => {
-    console.error('❌ Помилка зупинки бота:', error.message);
     process.exit(1);
   });
 }); 

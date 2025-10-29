@@ -9,7 +9,7 @@
   },
   "schedule": {
     "cron": "*/30 * * * *",
-    "description": "Запуск кожні ... хвилин"
+    "description": "Запуск кожні 30 хвилин"
   },
   "users": [
     {
@@ -95,7 +95,7 @@
     {
       "username": "murHUB",
       "lastfmProfile": "https://www.last.fm/user/Labean_Dreams",
-      "disabled": false
+      "disabled": true
     },
     {
       "username": "ПК Луцьк",
