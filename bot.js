@@ -248,20 +248,28 @@ function formatInactiveUsersTable() {
     return null;
   }
   
-  // Сортуємо користувачів за часом неактивності (від більшого до меншого)
   const sortedInactiveUsers = Array.from(inactiveUsersData.values())
     .sort((a, b) => b.minutesInactive - a.minutesInactive);
   
-  let tableMessage = `⚠️ Неактивні Last.fm профілі:\n\n`;
+  let tableMessage = ` Неактивні Last.fm профілі:\n\n`;
   
   for (const user of sortedInactiveUsers) {
-    // Форматуємо посилання як клікабельне ім'я
     const clickableLink = `<a href="${user.lastfmProfile}">${user.lastfmUsername}</a>`;
+    const statusIcon = user.isApiError ? '' : '';
+
+    let displayTime = user.timeInactive;
+    if (!user.isApiError && typeof user.minutesInactive === 'number') {
+      const m = user.minutesInactive;
+      const hours = Math.floor(m / 60);
+      const minutes = m % 60;
+      if (hours > 0) {
+        displayTime = `${hours} год ${minutes} хв`;
+      } else {
+        displayTime = `${minutes} хв`;
+      }
+    }
     
-    // Додаємо іконку для API помилок
-    const statusIcon = user.isApiError ? '🔴' : '🍌';
-    
-    tableMessage += `${statusIcon} <b>${user.username}</b> | ${clickableLink}\n⏱️ ${user.timeInactive}\n`;
+    tableMessage += `${statusIcon} <b>${user.username}</b> | ${clickableLink}\n ${displayTime}\n`;
   }
   
   return tableMessage;
@@ -288,46 +296,44 @@ function logErrorOnce(errorKey, errorMessage) {
 
 // Функція для отримання останнього треку з Last.fm API
 async function getLastTrack(username) {
-  try {
-    const response = await axios.get('https://ws.audioscrobbler.com/2.0/', {
-      params: {
-        method: 'user.getrecenttracks',
-        user: username,
-        api_key: config.lastfm.apiKey,
-        format: 'json',
-        limit: 1,
-        _: Date.now() // Запобігаємо кешуванню
-      },
-      timeout: 10000, // 10 секунд таймаут
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await axios.get('https://ws.audioscrobbler.com/2.0/', {
+        params: {
+          method: 'user.getrecenttracks',
+          user: username,
+          api_key: config.lastfm.apiKey,
+          format: 'json',
+          limit: 1,
+          _: Date.now()
+        },
+        timeout: 10000,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.data || !response.data.recenttracks || !response.data.recenttracks.track) {
+        return null;
       }
-    });
 
-    // Перевіряємо структуру відповіді
-    if (!response.data || !response.data.recenttracks || !response.data.recenttracks.track) {
+      const tracks = response.data.recenttracks.track;
+      if (Array.isArray(tracks) && tracks.length > 0) {
+        const lastTrack = tracks[0];
+        return processTrackData(lastTrack, username);
+      }
+      if (tracks && typeof tracks === 'object') {
+        return processTrackData(tracks, username);
+      }
       return null;
+    } catch (error) {
+      lastError = error;
+      await new Promise(r => setTimeout(r, 300));
     }
-
-    const tracks = response.data.recenttracks.track;
-    
-    // Якщо tracks - масив
-    if (Array.isArray(tracks) && tracks.length > 0) {
-      const lastTrack = tracks[0];
-      return processTrackData(lastTrack, username);
-    }
-    
-    // Якщо tracks - об'єкт (один трек)
-    if (tracks && typeof tracks === 'object') {
-      return processTrackData(tracks, username);
-    }
-    
-    return null;
-    
-  } catch (error) {
-    return null;
   }
+  return null;
 }
 
 // Допоміжна функція для обробки даних треку
@@ -345,14 +351,9 @@ function processTrackData(track, username) {
       };
     }
     
-    // Якщо трек не грає зараз, використовуємо час останнього прослуханого треку
+    // Якщо трек не грає зараз, але немає коректного date.uts — вважаємо дані ненадійними
     if (!track.date || !track.date.uts) {
-      return {
-        timestamp: Math.floor(Date.now() / 1000),
-        track: track.name || 'Невідомий трек',
-        artist: track.artist && track.artist['#text'] ? track.artist['#text'] : 'Невідомий виконавець',
-        isNowPlaying: false
-      };
+      return null;
     }
     
     let timestamp = parseInt(track.date.uts);
@@ -364,9 +365,9 @@ function processTrackData(track, username) {
     
     // Перевіряємо чи timestamp валідний
     if (isNaN(timestamp) || timestamp < 1000000000) {
-      // Якщо timestamp невалідний, використовуємо поточний час
+      // Якщо timestamp невалідний, використовуємо 0
       return {
-        timestamp: Math.floor(Date.now() / 1000),
+        timestamp: 0,
         track: track.name || 'Невідомий трек',
         artist: track.artist && track.artist['#text'] ? track.artist['#text'] : 'Невідомий виконавець',
         isNowPlaying: false
@@ -393,18 +394,11 @@ async function checkUserActivity(user) {
     const lastTrackData = await getLastTrack(lastfmUsername);
     
     if (!lastTrackData) {
-      // Якщо не можемо отримати дані, вважаємо користувача неактивним
-      const wasPreviouslyActive = userStates.get(username) === 'active';
-      userStates.set(username, 'inactive');
-      
-      // Оновлюємо або створюємо дані про користувача з проблемами API
       const existingData = inactiveUsersData.get(username);
       if (existingData && existingData.isApiError) {
-        // Якщо користувач вже був з API помилкою, оновлюємо час
         const timeSinceError = Math.floor((Date.now() - (existingData.errorTimestamp || Date.now())) / 1000 / 60);
         const hoursInactive = Math.floor(timeSinceError / 60);
         const daysInactive = Math.floor(hoursInactive / 24);
-        
         let timeMessage = '';
         if (daysInactive > 0) {
           timeMessage = `${daysInactive} д ${hoursInactive % 24} год (API помилка)`;
@@ -413,7 +407,6 @@ async function checkUserActivity(user) {
         } else {
           timeMessage = `${timeSinceError} хв (API помилка)`;
         }
-        
         inactiveUsersData.set(username, {
           username: username,
           lastfmProfile: user.lastfmProfile,
@@ -424,7 +417,6 @@ async function checkUserActivity(user) {
           errorTimestamp: existingData.errorTimestamp || Date.now()
         });
       } else {
-        // Новий користувач з API помилкою
         inactiveUsersData.set(username, {
           username: username,
           lastfmProfile: user.lastfmProfile,
@@ -435,8 +427,6 @@ async function checkUserActivity(user) {
           errorTimestamp: Date.now()
         });
       }
-      
-      // Встановлюємо прапорець ініціалізації
       if (!userStates.get(username + '_initialized')) {
         userStates.set(username + '_initialized', true);
       }
@@ -454,18 +444,11 @@ async function checkUserActivity(user) {
     
     // Використовуємо UTC час для порівняння з Last.fm timestamp
     const currentTimeUTC = Math.floor(Date.now() / 1000);
-    const timeSinceLastTrack = lastTrackData.timestamp === 0 ? 0 : currentTimeUTC - lastTrackData.timestamp;
+    // Чистий розрахунок без будь-яких зсувів; від’ємні значення обрізаємо до 0
+    const rawDelta = lastTrackData.timestamp === 0 ? 0 : (currentTimeUTC - lastTrackData.timestamp);
+    const timeSinceLastTrack = rawDelta < 0 ? 0 : rawDelta;
     const thresholdMinutes = config.inactivityThreshold.minutes;
     const thresholdSeconds = thresholdMinutes * 60;
-    
-    // Якщо timeSinceLastTrack негативний (трек в майбутньому через неправильний системний час),
-    // вважаємо користувача АКТИВНИМ, бо трек був нещодавно скроблений
-    if (timeSinceLastTrack < 0) {
-      userStates.set(username, 'active');
-      userStates.set(username + '_initialized', true);
-      inactiveUsersData.delete(username);
-      return;
-    }
     
     // Якщо timeSinceLastTrack більше порогу - неактивний
     const isCurrentlyInactive = timeSinceLastTrack > thresholdSeconds;
