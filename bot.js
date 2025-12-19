@@ -286,6 +286,9 @@ const inactiveUsersData = new Map();
 // Зберігання показаних помилок (щоб не дублювати)
 const shownErrors = new Set();
 
+// Останній відомий UTC-час сервера Last.fm (заголовок Date)
+let lastServerTimeUTC = null;
+
 // Функція для показу помилки тільки один раз
 function logErrorOnce(errorKey, errorMessage) {
   if (!shownErrors.has(errorKey)) {
@@ -314,6 +317,13 @@ async function getLastTrack(username) {
           'Pragma': 'no-cache'
         }
       });
+
+      if (response && response.headers && response.headers['date']) {
+        const serverDate = Date.parse(response.headers['date']);
+        if (!isNaN(serverDate)) {
+          lastServerTimeUTC = Math.floor(serverDate / 1000);
+        }
+      }
 
       if (!response.data || !response.data.recenttracks || !response.data.recenttracks.track) {
         return null;
@@ -365,13 +375,9 @@ function processTrackData(track, username) {
     
     // Перевіряємо чи timestamp валідний
     if (isNaN(timestamp) || timestamp < 1000000000) {
-      // Якщо timestamp невалідний, використовуємо 0
-      return {
-        timestamp: 0,
-        track: track.name || 'Невідомий трек',
-        artist: track.artist && track.artist['#text'] ? track.artist['#text'] : 'Невідомий виконавець',
-        isNowPlaying: false
-      };
+      // Якщо timestamp невалідний — повертаємо null, щоб вище це трактувалось як проблемні/ненадійні дані,
+      // а не як "вічно активний" користувач з timestamp = 0
+      return null;
     }
     
     return {
@@ -392,6 +398,14 @@ async function checkUserActivity(user) {
   
   try {
     const lastTrackData = await getLastTrack(lastfmUsername);
+
+    // Детальний дебаг саме для проблемних кейсів (наприклад, vansi69)
+    if (lastfmUsername === 'vansi69') {
+      console.log('--- DEBUG vansi69 ---');
+      console.log('lastTrackData:', lastTrackData);
+      console.log('lastServerTimeUTC:', lastServerTimeUTC);
+      console.log('now (local):', Math.floor(Date.now() / 1000));
+    }
     
     if (!lastTrackData) {
       const existingData = inactiveUsersData.get(username);
@@ -443,12 +457,41 @@ async function checkUserActivity(user) {
     }
     
     // Використовуємо UTC час для порівняння з Last.fm timestamp
-    const currentTimeUTC = Math.floor(Date.now() / 1000);
-    // Чистий розрахунок без будь-яких зсувів; від’ємні значення обрізаємо до 0
-    const rawDelta = lastTrackData.timestamp === 0 ? 0 : (currentTimeUTC - lastTrackData.timestamp);
-    const timeSinceLastTrack = rawDelta < 0 ? 0 : rawDelta;
+    const currentTimeUTC = (typeof lastServerTimeUTC === 'number' && lastServerTimeUTC > 0)
+      ? lastServerTimeUTC
+      : Math.floor(Date.now() / 1000);
+
     const thresholdMinutes = config.inactivityThreshold.minutes;
     const thresholdSeconds = thresholdMinutes * 60;
+
+    // Чистий розрахунок без будь-яких зсувів.
+    // ВАЖЛИВО:
+    //  - timestamp === 0 для "невідомого часу" НЕ вважаємо 0 секунд (інакше користувач завжди активний),
+    //    у такому випадку вважаємо, що він гарантовано перевищив поріг неактивності.
+    //  - якщо різниця від’ємна (треки ніби з "майбутнього" через розбіжність часу),
+    //    повторно рахуємо за локальним часом; якщо все ще від’ємна — також вважаємо неактивним.
+    let rawDelta = currentTimeUTC - lastTrackData.timestamp;
+    if (lastTrackData.timestamp === 0) {
+      rawDelta = thresholdSeconds + 1;
+    } else if (rawDelta < 0) {
+      const localNow = Math.floor(Date.now() / 1000);
+      rawDelta = localNow - lastTrackData.timestamp;
+      if (rawDelta < 0) {
+        rawDelta = thresholdSeconds + 1;
+      }
+    }
+
+    const timeSinceLastTrack = rawDelta < 0 ? 0 : rawDelta;
+
+    // Додатковий дебаг різниці часу для vansi69
+    if (lastfmUsername === 'vansi69') {
+      console.log('--- DEBUG vansi69 TIME ---');
+      console.log('currentTimeUTC:', currentTimeUTC);
+      console.log('timestamp:', lastTrackData.timestamp);
+      console.log('rawDelta:', rawDelta);
+      console.log('timeSinceLastTrack (sec):', timeSinceLastTrack);
+      console.log('timeSinceLastTrack (min):', Math.floor(timeSinceLastTrack / 60));
+    }
     
     // Якщо timeSinceLastTrack більше порогу - неактивний
     const isCurrentlyInactive = timeSinceLastTrack > thresholdSeconds;
