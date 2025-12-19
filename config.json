@@ -13,33 +13,8 @@
   },
   "users": [
     {
-      "username": "Tidal ПК",
-      "lastfmProfile": "https://www.last.fm/user/Tidal_Zalupa",
-      "disabled": false
-    },
-    {
-      "username": "zalupamusic (TK)",
-      "lastfmProfile": "https://www.last.fm/user/murHUBmusic",
-      "disabled": false
-    },
-    {
-      "username": "kokosamerikos (TK)",
-      "lastfmProfile": "https://www.last.fm/user/tolik_gartun",
-      "disabled": false
-    },
-    {
-      "username": "yaroslav.ryz (TK)",
-      "lastfmProfile": "https://www.last.fm/user/nazarenko_kh",
-      "disabled": false
-    },
-    {
       "username": "A1",
       "lastfmProfile": "https://www.last.fm/user/Tina_LozaLupa",
-      "disabled": false
-    },
-    {
-      "username": "Anat(TK)",
-      "lastfmProfile": "https://www.last.fm/user/yarik_ryzhenko",
       "disabled": false
     },
     {
@@ -48,7 +23,7 @@
       "disabled": false
     },
     {
-      "username": "6s",
+      "username": "Liliya Afro",
       "lastfmProfile": "https://www.last.fm/user/gartun_shura",
       "disabled": false
     },
@@ -73,16 +48,6 @@
       "disabled": false
     },
     {
-      "username": "Leha Guzva",
-      "lastfmProfile": "https://www.last.fm/user/Ykin_TV",
-      "disabled": true
-    },
-    {
-      "username": "4erevychok",
-      "lastfmProfile": "https://www.last.fm/user/obana-ok",
-      "disabled": true
-    },
-    {
       "username": "Kokos",
       "lastfmProfile": "https://www.last.fm/user/Kokos_Amerikos",
       "disabled": false
@@ -95,10 +60,10 @@
     {
       "username": "murHUB",
       "lastfmProfile": "https://www.last.fm/user/Labean_Dreams",
-      "disabled": true
+      "disabled": false
     },
     {
-      "username": "ПК Луцьк",
+      "username": "iPhone 7",
       "lastfmProfile": "https://www.last.fm/user/murRecrods",
       "disabled": false
     },
@@ -111,11 +76,6 @@
       "username": "Kris.RY",
       "lastfmProfile": "https://www.last.fm/user/Tuto_Prostituto",
       "disabled": false
-    },
-    {
-      "username": "LozaLupaMusic",
-      "lastfmProfile": "https://www.last.fm/ru/user/blyad_i_pidar",
-      "disabled": true
     },
     {
       "username": "Dertanyan",
@@ -133,19 +93,19 @@
       "disabled": false
     },
     {
-      "username": "kristina.ryz (TK)",
-      "lastfmProfile": "https://www.last.fm/user/yarikcat228",
+      "username": "SpaceStarSound",
+      "lastfmProfile": "https://www.last.fm/user/SpaceStarSound",
       "disabled": false
     },
     {
-      "username": "SpaceStarSound",
-      "lastfmProfile": "https://www.last.fm/user/SpaceStarSound",
-      "disabled": true
+      "username": "limpopo afro",
+      "lastfmProfile": "https://www.last.fm/user/limpopo69",
+      "disabled": false
     },
     {
-      "username": "Kvasolyna",
-      "lastfmProfile": "https://www.last.fm/user/Kvasolyna_69",
-      "disabled": true
+      "username": "Van Si Apple",
+      "lastfmProfile": "https://www.last.fm/user/vansi69",
+      "disabled": false
     }
   ],
   "inactivityThreshold": {
